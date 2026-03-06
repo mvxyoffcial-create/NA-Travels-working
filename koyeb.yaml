@@ -1,0 +1,17 @@
+# koyeb.yaml - Koyeb deployment configuration
+# Deploy via: koyeb service create --name tourist-backend --git github.com/your-user/tourist-backend
+
+name: tourist-backend
+
+run:
+  - pip install -r requirements.txt
+
+start:
+  uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Environment variables to set in Koyeb dashboard:
+# MONGODB_URL=mongodb+srv://...
+# SECRET_KEY=your-secret-key
+# SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM
+# GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+# FRONTEND_URL=https://your-frontend.vercel.app
