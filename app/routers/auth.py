@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, status
+from fastapi.responses import RedirectResponse
 from datetime import datetime, timedelta
 from bson import ObjectId
 import httpx
@@ -84,17 +85,19 @@ async def signup(data: UserSignup, background_tasks: BackgroundTasks):
 
 @router.get("/verify-email")
 async def verify_email(token: str, background_tasks: BackgroundTasks):
+    FRONTEND = settings.FRONTEND_URL  # e.g. https://natours.ct.ws
     db = get_db()
     user = await db.users.find_one({"verification_token": token})
+
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification token.")
+        return RedirectResponse(url=f"{FRONTEND}/verify-email.html?status=invalid", status_code=302)
 
     expires = user.get("verification_token_expires")
     if expires and datetime.utcnow() > expires:
-        raise HTTPException(status_code=400, detail="Verification token has expired. Please request a new one.")
+        return RedirectResponse(url=f"{FRONTEND}/verify-email.html?status=expired", status_code=302)
 
     if user.get("is_verified"):
-        return {"message": "Email already verified."}
+        return RedirectResponse(url=f"{FRONTEND}/verify-email.html?status=already", status_code=302)
 
     await db.users.update_one(
         {"_id": user["_id"]},
@@ -110,7 +113,8 @@ async def verify_email(token: str, background_tasks: BackgroundTasks):
         to_email=user["email"],
         username=user.get("username") or user.get("full_name") or "User"
     )
-    return {"message": "Email verified successfully! You can now log in."}
+    # Redirect to frontend with success status — short param, no token
+    return RedirectResponse(url=f"{FRONTEND}/verify-email.html?status=success", status_code=302)
 
 
 # ─── Resend Verification ──────────────────────────────────────────────────────
@@ -298,18 +302,59 @@ async def forgot_password(data: ForgotPasswordRequest, background_tasks: Backgro
     return {"message": "If this email is registered, a password reset link has been sent."}
 
 
-# ─── Reset Password ───────────────────────────────────────────────────────────
+# ─── Reset Password GET (email link → validate token → redirect to frontend) ──
+# Email links point here. We validate the token, then redirect to frontend
+# with a short safe session key. InfinityFree blocks long tokens in URLs.
+
+@router.get("/reset-password")
+async def reset_password_redirect(token: str):
+    FRONTEND = settings.FRONTEND_URL
+    db = get_db()
+    user = await db.users.find_one({"reset_token": token})
+
+    if not user:
+        return RedirectResponse(url=f"{FRONTEND}/reset-password.html?status=invalid", status_code=302)
+
+    expires = user.get("reset_token_expires")
+    if not expires or datetime.utcnow() > expires:
+        return RedirectResponse(url=f"{FRONTEND}/reset-password.html?status=expired", status_code=302)
+
+    # Store a short session key that maps to the real token (valid 30 min)
+    session_key = generate_secure_token(16)  # short 16-char safe key
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {
+            "reset_session_key": session_key,
+            "reset_session_expires": datetime.utcnow() + timedelta(minutes=30),
+        }}
+    )
+    # Redirect with short session key — safe for InfinityFree
+    return RedirectResponse(url=f"{FRONTEND}/reset-password.html?key={session_key}", status_code=302)
+
+
+# ─── Reset Password POST (submit new password with session key) ───────────────
 
 @router.post("/reset-password")
 async def reset_password(data: ResetPasswordRequest):
     db = get_db()
-    user = await db.users.find_one({"reset_token": data.token})
-    if not user:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
 
-    expires = user.get("reset_token_expires")
-    if not expires or datetime.utcnow() > expires:
-        raise HTTPException(status_code=400, detail="Reset token has expired. Please request a new one.")
+    # Support both old token field and new session_key field
+    user = await db.users.find_one({
+        "$or": [
+            {"reset_token": data.token},
+            {"reset_session_key": data.token}
+        ]
+    })
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link. Please request a new one.")
+
+    # Check expiry — support both expiry fields
+    now = datetime.utcnow()
+    token_exp = user.get("reset_token_expires")
+    session_exp = user.get("reset_session_expires")
+    expires = session_exp or token_exp
+    if not expires or now > expires:
+        raise HTTPException(status_code=400, detail="Reset link has expired. Please request a new one.")
 
     await db.users.update_one(
         {"_id": user["_id"]},
@@ -317,6 +362,8 @@ async def reset_password(data: ResetPasswordRequest):
             "password_hash": hash_password(data.new_password),
             "reset_token": None,
             "reset_token_expires": None,
+            "reset_session_key": None,
+            "reset_session_expires": None,
             "updated_at": datetime.utcnow()
         }}
     )
