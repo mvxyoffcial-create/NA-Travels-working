@@ -114,7 +114,8 @@ def _send_email(to_email: str, subject: str, html_body: str):
 # ── 1. Email Verification ─────────────────────────────────────────────────────
 
 def send_verification_email(to_email: str, username: str, token: str):
-    verify_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+    api_base = "https://elaborate-flori-zerocreationhh-63a658e0.koyeb.app"
+    verify_url = f"{api_base}/api/v1/auth/verify-email?token={token}"
     content = f"""
       <h1 style="margin:0 0 8px;font-size:28px;font-weight:900;color:{BRAND_WHITE};">
         Welcome to NA Tours! 🌍
@@ -181,7 +182,8 @@ def send_welcome_email(to_email: str, username: str):
 # ── 3. Password Reset ─────────────────────────────────────────────────────────
 
 def send_password_reset_email(to_email: str, username: str, token: str):
-    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+    api_base = "https://elaborate-flori-zerocreationhh-63a658e0.koyeb.app"
+    reset_url = f"{api_base}/api/v1/auth/reset-password?token={token}"
     content = f"""
       <h1 style="margin:0 0 8px;font-size:28px;font-weight:900;color:{BRAND_WHITE};">
         Password Reset 🔑
