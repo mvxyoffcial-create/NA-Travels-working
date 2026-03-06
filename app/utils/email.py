@@ -6,14 +6,99 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# ── NA Tours brand colours ──────────────────────────────────────────────────
+BRAND_BLACK  = "#0a0a0a"
+BRAND_YELLOW = "#f5c518"
+BRAND_WHITE  = "#ffffff"
+BRAND_GRAY   = "#1a1a1a"
+BRAND_LIGHT  = "#f9f6f0"
+
+
+def _base_template(content: str) -> str:
+    """Shared wrapper: black background, yellow accent, white text."""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NA Tours</title>
+</head>
+<body style="margin:0;padding:0;background:{BRAND_BLACK};font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:{BRAND_BLACK};padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:600px;background:{BRAND_GRAY};border-radius:16px;
+               overflow:hidden;border:1px solid #2a2a2a;">
+
+          <!-- HEADER -->
+          <tr>
+            <td style="background:{BRAND_BLACK};padding:28px 36px;border-bottom:3px solid {BRAND_YELLOW};">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <span style="font-size:26px;font-weight:900;color:{BRAND_YELLOW};
+                                 letter-spacing:2px;text-transform:uppercase;">NA</span>
+                    <span style="font-size:26px;font-weight:900;color:{BRAND_WHITE};
+                                 letter-spacing:2px;text-transform:uppercase;"> Travels</span>
+                    <div style="font-size:11px;color:#888;letter-spacing:3px;
+                                text-transform:uppercase;margin-top:2px;">
+                      Explore the World
+                    </div>
+                  </td>
+                  <td align="right">
+                    <span style="font-size:28px;">✈️</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="padding:36px 36px 28px;">
+              {content}
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background:{BRAND_BLACK};padding:20px 36px;
+                       border-top:1px solid #2a2a2a;text-align:center;">
+              <p style="margin:0;color:#555;font-size:12px;">
+                © 2025 NA Tours · All rights reserved
+              </p>
+              <p style="margin:6px 0 0;color:#444;font-size:11px;">
+                If you have questions, contact us at
+                <a href="mailto:{settings.EMAIL_FROM}"
+                   style="color:{BRAND_YELLOW};text-decoration:none;">{settings.EMAIL_FROM}</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+
+def _btn(url: str, label: str) -> str:
+    return f"""
+    <a href="{url}"
+       style="display:inline-block;padding:14px 36px;background:{BRAND_YELLOW};
+              color:{BRAND_BLACK};text-decoration:none;border-radius:8px;
+              font-weight:800;font-size:15px;letter-spacing:0.5px;margin:20px 0;">
+      {label}
+    </a>"""
+
 
 def _send_email(to_email: str, subject: str, html_body: str):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM}>"
+    msg["From"] = f"NA Tours <{settings.EMAIL_FROM}>"
     msg["To"] = to_email
     msg.attach(MIMEText(html_body, "html"))
-
     try:
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
             server.ehlo()
@@ -26,80 +111,101 @@ def _send_email(to_email: str, subject: str, html_body: str):
         raise
 
 
+# ── 1. Email Verification ─────────────────────────────────────────────────────
+
 def send_verification_email(to_email: str, username: str, token: str):
     verify_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="utf-8"></head>
-    <body style="font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;">
-      <div style="max-width:600px;margin:auto;background:#fff;border-radius:10px;padding:30px;">
-        <h2 style="color:#2c7be5;">Welcome to {settings.APP_NAME}! 🌍</h2>
-        <p>Hi <strong>{username}</strong>,</p>
-        <p>Thanks for signing up! Please verify your email address to get started.</p>
-        <a href="{verify_url}"
-           style="display:inline-block;padding:12px 28px;background:#2c7be5;color:#fff;
-                  text-decoration:none;border-radius:6px;margin:16px 0;font-weight:bold;">
-          Verify Email
-        </a>
-        <p style="color:#888;font-size:13px;">This link expires in 24 hours.<br>
-           If you didn't create an account, ignore this email.</p>
-        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
-        <p style="color:#aaa;font-size:12px;">© {settings.APP_NAME}</p>
-      </div>
-    </body>
-    </html>
-    """
-    _send_email(to_email, f"Verify your {settings.APP_NAME} account", html)
+    content = f"""
+      <h1 style="margin:0 0 8px;font-size:28px;font-weight:900;color:{BRAND_WHITE};">
+        Welcome to NA Tours! 🌍
+      </h1>
+      <p style="margin:0 0 20px;font-size:15px;color:#aaa;">
+        Your adventure starts here.
+      </p>
 
+      <p style="color:{BRAND_WHITE};font-size:15px;margin:0 0 6px;">
+        Hi <strong style="color:{BRAND_YELLOW};">{username}</strong>,
+      </p>
+      <p style="color:#ccc;font-size:15px;line-height:1.6;margin:0 0 4px;">
+        Thanks for signing up! Please verify your email address to activate
+        your account and start exploring amazing destinations.
+      </p>
+
+      {_btn(verify_url, "✅ Verify My Email")}
+
+      <div style="background:{BRAND_BLACK};border-left:3px solid {BRAND_YELLOW};
+                  border-radius:6px;padding:14px 18px;margin-top:8px;">
+        <p style="margin:0;color:#888;font-size:13px;line-height:1.6;">
+          ⏰ This link expires in <strong style="color:{BRAND_WHITE};">24 hours</strong>.<br>
+          🔒 If you didn't create an account, you can safely ignore this email.
+        </p>
+      </div>
+    """
+    _send_email(to_email, "Verify your NA Tours account ✈️", _base_template(content))
+
+
+# ── 2. Welcome (after verification) ──────────────────────────────────────────
+
+def send_welcome_email(to_email: str, username: str):
+    content = f"""
+      <h1 style="margin:0 0 8px;font-size:28px;font-weight:900;color:{BRAND_WHITE};">
+        Email Verified! 🎉
+      </h1>
+      <p style="margin:0 0 20px;font-size:15px;color:#aaa;">
+        You're all set to explore.
+      </p>
+
+      <p style="color:{BRAND_WHITE};font-size:15px;margin:0 0 6px;">
+        Hi <strong style="color:{BRAND_YELLOW};">{username}</strong>,
+      </p>
+      <p style="color:#ccc;font-size:15px;line-height:1.6;">
+        Your email has been verified successfully. Welcome to the NA Tours family!<br>
+        Discover breathtaking destinations, write reviews, and share your travel experiences.
+      </p>
+
+      {_btn(settings.FRONTEND_URL, "🌍 Start Exploring")}
+
+      <div style="background:{BRAND_BLACK};border-radius:8px;padding:18px;margin-top:8px;">
+        <p style="margin:0 0 10px;color:{BRAND_YELLOW};font-weight:700;font-size:13px;
+                  text-transform:uppercase;letter-spacing:1px;">
+          What you can do now:
+        </p>
+        <p style="margin:4px 0;color:#aaa;font-size:14px;">✈️ Browse tourist destinations worldwide</p>
+        <p style="margin:4px 0;color:#aaa;font-size:14px;">⭐ Write reviews & upload travel photos</p>
+        <p style="margin:4px 0;color:#aaa;font-size:14px;">🗺️ Save your favourite places</p>
+      </div>
+    """
+    _send_email(to_email, "Welcome to NA Tours — You're verified! 🎉", _base_template(content))
+
+
+# ── 3. Password Reset ─────────────────────────────────────────────────────────
 
 def send_password_reset_email(to_email: str, username: str, token: str):
     reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="utf-8"></head>
-    <body style="font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;">
-      <div style="max-width:600px;margin:auto;background:#fff;border-radius:10px;padding:30px;">
-        <h2 style="color:#e74c3c;">Password Reset Request 🔑</h2>
-        <p>Hi <strong>{username}</strong>,</p>
-        <p>We received a request to reset your password. Click the button below:</p>
-        <a href="{reset_url}"
-           style="display:inline-block;padding:12px 28px;background:#e74c3c;color:#fff;
-                  text-decoration:none;border-radius:6px;margin:16px 0;font-weight:bold;">
-          Reset Password
-        </a>
-        <p style="color:#888;font-size:13px;">This link expires in 1 hour.<br>
-           If you didn't request this, ignore this email — your password won't change.</p>
-        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
-        <p style="color:#aaa;font-size:12px;">© {settings.APP_NAME}</p>
-      </div>
-    </body>
-    </html>
-    """
-    _send_email(to_email, f"Reset your {settings.APP_NAME} password", html)
+    content = f"""
+      <h1 style="margin:0 0 8px;font-size:28px;font-weight:900;color:{BRAND_WHITE};">
+        Password Reset 🔑
+      </h1>
+      <p style="margin:0 0 20px;font-size:15px;color:#aaa;">
+        We received a reset request for your account.
+      </p>
 
+      <p style="color:{BRAND_WHITE};font-size:15px;margin:0 0 6px;">
+        Hi <strong style="color:{BRAND_YELLOW};">{username}</strong>,
+      </p>
+      <p style="color:#ccc;font-size:15px;line-height:1.6;">
+        Someone requested a password reset for your NA Tours account.
+        Click the button below to set a new password.
+      </p>
 
-def send_welcome_email(to_email: str, username: str):
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="utf-8"></head>
-    <body style="font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;">
-      <div style="max-width:600px;margin:auto;background:#fff;border-radius:10px;padding:30px;">
-        <h2 style="color:#27ae60;">Email Verified! 🎉</h2>
-        <p>Hi <strong>{username}</strong>,</p>
-        <p>Your email has been verified successfully. Welcome to {settings.APP_NAME}!</p>
-        <p>Start exploring amazing tourist destinations and share your experiences.</p>
-        <a href="{settings.FRONTEND_URL}"
-           style="display:inline-block;padding:12px 28px;background:#27ae60;color:#fff;
-                  text-decoration:none;border-radius:6px;margin:16px 0;font-weight:bold;">
-          Explore Now
-        </a>
-        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
-        <p style="color:#aaa;font-size:12px;">© {settings.APP_NAME}</p>
+      {_btn(reset_url, "🔐 Reset My Password")}
+
+      <div style="background:{BRAND_BLACK};border-left:3px solid #ff4444;
+                  border-radius:6px;padding:14px 18px;margin-top:8px;">
+        <p style="margin:0;color:#888;font-size:13px;line-height:1.6;">
+          ⏰ This link expires in <strong style="color:{BRAND_WHITE};">1 hour</strong>.<br>
+          🛡️ If you didn't request this, ignore this email — your password will remain unchanged.
+        </p>
       </div>
-    </body>
-    </html>
     """
-    _send_email(to_email, f"Welcome to {settings.APP_NAME}!", html)
+    _send_email(to_email, "Reset your NA Tours password 🔑", _base_template(content))
