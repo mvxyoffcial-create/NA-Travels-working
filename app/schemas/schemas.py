@@ -120,15 +120,16 @@ class DestinationUpdate(BaseModel):
 # ─── Review Schemas ───────────────────────────────────────────────────────────
 
 class ReviewCreate(BaseModel):
-    destination_id: str
-    rating: int = Field(..., ge=1, le=5)
-    title: str = Field(..., min_length=3, max_length=200)
-    body: str = Field(..., min_length=10, max_length=5000)
-    visited_on: Optional[str] = Field(None, description="e.g. 'Summer 2024'")
+    rating:    int           = Field(..., ge=1, le=5)
+    title:     str           = Field(..., min_length=3, max_length=200)
+    body:      str           = Field(..., min_length=10, max_length=5000)
+    trip_date: Optional[str] = Field(None, max_length=100, description="e.g. 'March 2026'")
+    trip_type: Optional[str] = Field(None, max_length=100, description="e.g. 'Airport Transfer'")
 
 
 class ReviewUpdate(BaseModel):
-    rating: Optional[int] = Field(None, ge=1, le=5)
-    title: Optional[str] = Field(None, min_length=3, max_length=200)
-    body: Optional[str] = Field(None, min_length=10, max_length=5000)
-    visited_on: Optional[str] = None
+    rating:    Optional[int] = Field(None, ge=1, le=5)
+    title:     Optional[str] = Field(None, min_length=3, max_length=200)
+    body:      Optional[str] = Field(None, min_length=10, max_length=5000)
+    trip_date: Optional[str] = None
+    trip_type: Optional[str] = None
